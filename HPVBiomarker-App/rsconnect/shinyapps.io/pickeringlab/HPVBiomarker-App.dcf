@@ -1,0 +1,13 @@
+name: HPVBiomarker-App
+title: HPVBiomarker-App
+username:
+account: pickeringlab
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 6126173
+bundleId: 5815456
+url: https://pickeringlab.shinyapps.io/HPVBiomarker-App/
+when: 1650407237.37506
+lastSyncTime: 1650407237.37506
+asMultiple: FALSE
+asStatic: FALSE
