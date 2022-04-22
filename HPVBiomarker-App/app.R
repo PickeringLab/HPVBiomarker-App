@@ -21,8 +21,8 @@ ui <- fluidPage(
                          #hr(),
                          h3("Import Nanostring data"),
                          br(),
-                         fileInput("datatab", "Upload Nanostring output (tab separated txt file) ...", 
-                                   accept = ".txt")
+                         fileInput("datatab", "Upload data (.tsv / .csv / .xlsx / tab separated .txt) ...", 
+                                   accept = c(".csv", ".tsv", ".xlsx", ".txt"))
                      ),
                      mainPanel(
                          dataTableOutput("datatable")
@@ -33,12 +33,16 @@ ui <- fluidPage(
                      sidebarPanel(
                          width = 4,
                          h3("Filter Nanostring data"),
-                         br(),
-                         p("The analysis only requires the", strong('Probe Name'), " column and the sample columns."),
-                         p("Using the drop-down menu below, please select all the columns that are not required in the analysis, so that they can be filtered out."),
-                         p("If by mistake you choose a wrong column, click over it on the selection list and press 'Delete'."),
+                         #br(),
+                         p("The analysis only requires: "),
+                         p(strong("1. "), "the ", strong("Probe Name"), " column, and"),
+                         p(strong("2. "), "the sample columns."),
+                         #br(),
+                         p("Using the drop-down menu below, please select all the columns that are not required in the analysis, so that they can be filtered out. If there are no extra columns in your data, skip this step and directly click the 'Generate results' button."),
+                         #p("If by mistake you choose a wrong column, click over it on the selection list and press 'Delete' or 'Backspace'."),
                          selectInput("filter_columns", "Select the columns to be filtered:", "", selected = NULL, multiple = TRUE),
                          #br(),
+                         p(em("Note: If by mistake you choose a wrong column, click over it on the selection list and press 'Delete' or 'Backspace'.")),
                          p(em("Note: Please make sure to filter your data properly before generating the results. The results are wrong until this step is properly carried out.")),
                          p("When you have made your selections properly, click the button below to generate the results."),
                          fluidRow(
@@ -66,10 +70,14 @@ ui <- fluidPage(
                               tabPanel("Plots",
                                        plotOutput("flowchart"),
                                        fluidRow(
+                                           column(7, offset = 3,
+                                                  plotOutput("scatter1"))
+                                       ),
+                                       fluidRow(
                                            column(6,
-                                                  plotOutput("scatter1")),
+                                                  plotOutput("scatter2")),
                                            column(6,
-                                                  plotOutput("scatter2"))
+                                                  plotOutput("scatter3"))
                                        )
                               )))
         
@@ -89,7 +97,10 @@ server <- function(input, output) {
         ext <- tools::file_ext(input$datatab$name)
         switch(ext,
                txt = read_delim(input$datatab$datapath),
-               validate("Invalid file; Please upload a .xlsx, .csv or .tsv file")
+               csv = read_csv(input$datatab$datapath),
+               tsv = read_tsv(input$datatab$datapath),
+               xlsx = read_excel(input$datatab$datapath),
+               validate("Invalid file; Please upload a .xlsx, .csv, .tsv, or tab separated .txt file.")
         )
     })
     
@@ -238,23 +249,24 @@ server <- function(input, output) {
                   panel.background = element_rect(fill = "white", colour = "white"),
                   plot.title = element_text(face = "bold", hjust = 0.5, color = "#2C3E50"))
         
-        p$scatter1 <- ggplot(subset(results(datainput()), `CDA>AJM1` == 0), aes(x = UPP1, y = HLF, color = Classification)) +
+        p$scatter1 <- ggplot(results(datainput()), aes(x = CDA, y = C9orf172, color = CDA > C9orf172)) +
             geom_point() +
+            scale_color_manual(values = c("lightsalmon3", "seagreen3"), labels = c("CDA <= AJM1", "CDA > AJM1")) +
             geom_abline(color = "#2C3E50") +
             theme_bw() +
-            labs(title = "CDA > AJM1") +
+            labs(title = "CDA : AJM1", y = "AJM1") +
             theme(plot.title = element_text(face = "bold", hjust = 0.5, color = "#2C3E50"), 
                   axis.title = element_text(face = "bold", color = "#2C3E50"), 
                   axis.text = element_text(color = "#2C3E50"),
                   legend.title = element_blank(),
-                  legend.text = element_text(color = "#2C3E50"),
+                  legend.text = element_text(color = "#2C3E50", face = "bold"),
                   panel.background = element_rect(fill = "white", colour = "#2C3E50"),
                   panel.border = element_blank(),
                   plot.background = element_rect(fill = "white"),
                   panel.grid.major = element_blank(),
                   panel.grid.minor = element_blank())
         
-        p$scatter2 <- ggplot(subset(results(datainput()), `CDA>AJM1` == 1), aes(x = RHOD, y = LRMP, color = Classification)) +
+        p$scatter2 <- ggplot(subset(results(datainput()), `CDA>AJM1` == 0), aes(x = UPP1, y = HLF, color = Classification)) +
             geom_point() +
             geom_abline(color = "#2C3E50") +
             theme_bw() +
@@ -263,12 +275,30 @@ server <- function(input, output) {
                   axis.title = element_text(face = "bold", color = "#2C3E50"), 
                   axis.text = element_text(color = "#2C3E50"),
                   legend.title = element_blank(),
-                  legend.text = element_text(color = "#2C3E50"),
+                  legend.text = element_text(color = "#2C3E50", face = "bold"),
                   panel.background = element_rect(fill = "white", colour = "#2C3E50"),
                   panel.border = element_blank(),
                   plot.background = element_rect(fill = "white"),
                   panel.grid.major = element_blank(),
                   panel.grid.minor = element_blank())
+        
+        p$scatter3 <- ggplot(subset(results(datainput()), `CDA>AJM1` == 1), aes(x = RHOD, y = LRMP, color = Classification)) +
+            geom_point() +
+            geom_abline(color = "#2C3E50") +
+            theme_bw() +
+            labs(title = "CDA > AJM1") +
+            theme(plot.title = element_text(face = "bold", hjust = 0.5, color = "#2C3E50"), 
+                  axis.title = element_text(face = "bold", color = "#2C3E50"), 
+                  axis.text = element_text(color = "#2C3E50"),
+                  legend.title = element_blank(),
+                  legend.text = element_text(color = "#2C3E50", face = "bold"),
+                  panel.background = element_rect(fill = "white", colour = "#2C3E50"),
+                  panel.border = element_blank(),
+                  plot.background = element_rect(fill = "white"),
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank())
+        
+        
     })
     
     output$flowchart <- renderPlot({
@@ -281,6 +311,10 @@ server <- function(input, output) {
     
     output$scatter2 <- renderPlot({
         p$scatter2
+    }, res = 96)
+    
+    output$scatter3 <- renderPlot({
+        p$scatter3
     }, res = 96)
 
     
