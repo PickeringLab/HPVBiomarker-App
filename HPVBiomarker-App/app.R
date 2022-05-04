@@ -120,10 +120,12 @@ server <- function(input, output) {
                        `Probe Name` == "UPP1" |
                        `Probe Name` == "HLF") %>%
             select(-c(input$filter_columns))
+        return(data_filtered)
     }
     
     results <- function(data) {
         data_filtered <- filtered(data)
+        data_filtered[,-1] <- sapply(data_filtered[,-1], as.numeric)
         data_transformed <- rotate_df(data_filtered, rn = "Samples", cn = TRUE)
         data_scored <- data_transformed %>%
             mutate(`CDA>AJM1` = case_when(CDA > C9orf172 ~ 1,
